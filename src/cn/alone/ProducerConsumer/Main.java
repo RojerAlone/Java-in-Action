@@ -1,4 +1,4 @@
-package cn.alone.java.ProducerConsumer;
+package cn.alone.ProducerConsumer;
 
 /**
  * Created by RojerAlone on 2017/7/4.
