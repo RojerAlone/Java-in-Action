@@ -9,7 +9,7 @@
 ### 类的生命周期
 　　类从被加载到虚拟机内存一直到卸载出内存，经历了以下过程：
 　　![类加载过程](http://img.blog.csdn.net/20170711143829163?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvQWxvbmVfUm9qZXI=/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast)
-　　
+
 　　其中验证、准备、解析三个阶段统称为连接，解析阶段在某些情况下可以在初始化阶段之后再开始，这是为了支持Java的运行时绑定。
 #### 加载
 　　加载阶段完成3件事情：
@@ -36,7 +36,7 @@
 　　初始化阶段才真正执行用户定义的程序代码，执行类的构造方法，包括赋值类变量、静态语句块的合并（static{}块的语句合并）。JVM保证了初始化的线程安全，如果多个线程同时去初始化一个类，那么只有一个线程会执行初始化。
 ## 类加载器
 　　虚拟机设计团队把类加载阶段中的“通过一个类的全限定名来获取描述此类的二进制字节流”这个动作放到Java虚拟机外部去实现，以便让应用程序自己决定如何去获取所需要的类。 实现这个动作的代码模块称为“类加载器”。
-　　
+
 　　从Java虚拟机的角度来讲，只存在两种不同的类加载器：一种是启动类加载器（Bootstrap ClassLoader），这个类加载器使用C++语言实现，是虚拟机自身的一部分；另一种就是所有其他的类加载器，这些类加载器都由Java语言实现，独立于虚拟机外部，并且全都继承自抽象类`java.lang.ClassLoader`。
 # 对象在哪里生存
 　　Java生存在JVM（Java Virtual Machine，Java虚拟机）中。相对于C、C++需要程序员自己进行内存的管理，Java程序员显得不那么操心，内存管理交给了JVM来进行管理，只需要关注于业务的实现，但是因为“放弃”了内存的控制权，当出现了内存泄漏或溢出问题需要程序员自己去排查问题时，就需要开发人员对JVM的内存有足够的了解才能解决问题。
@@ -51,7 +51,8 @@
 　　虚拟机栈是线程私有的，它的生命周期和程序计数器相同。
 
 　　虚拟机栈中存储的是一个个的“栈帧”，每个栈帧的入栈和出栈代表一个方法的调用和执行完成，栈帧中存储局部变量表、操作数栈、动态链接、方法出口等信息。
-　　![虚拟机栈](http://img.blog.csdn.net/20170711093303823?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvQWxvbmVfUm9qZXI=/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast)
+
+![虚拟机栈](http://img.blog.csdn.net/20170711093303823?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvQWxvbmVfUm9qZXI=/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast)
 
 　　当虚拟机栈的栈深度大于虚拟机允许的深度，将抛出`StackOverflowError`异常，当虚拟机栈允许动态扩展时，如果扩展时无法申请到足够的内存，就会抛出`OutOfMemoryError`异常。
 #### 局部变量表
@@ -265,9 +266,11 @@ public class Obj {
 |MTT|最大持有次数限制 
 ### `jstat -gc`
 ![jstat -gc](http://img.blog.csdn.net/20170712145841131?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvQWxvbmVfUm9qZXI=/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast)
-从结果可以看到，Survivor1和Survivor2的大小都是5.12M，Survivor1暂未被使用，Survivor2使用了4905.2KB，Eden区域大小是33.28M，已使用28.58兆，老年代大小为87.55M，已使用16KB，方法区大小为13.44M，已使用13132.8KB，压缩类空间大小为1664KB，已使用1566.1KB，从程序启动到查看状态时发生了一次Young GC，所用时间为0.007秒，没有发生Full GC，GC总共花费时间为0.007秒。
+
+　　从结果可以看到，Survivor1和Survivor2的大小都是5.12M，Survivor1暂未被使用，Survivor2使用了4905.2KB，Eden区域大小是33.28M，已使用28.58兆，老年代大小为87.55M，已使用16KB，方法区大小为13.44M，已使用13132.8KB，压缩类空间大小为1664KB，已使用1566.1KB，从程序启动到查看状态时发生了一次Young GC，所用时间为0.007秒，没有发生Full GC，GC总共花费时间为0.007秒。
 ### `jstat -gcutil`
 ![jstat -gcutil](http://img.blog.csdn.net/20170712160247834?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvQWxvbmVfUm9qZXI=/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast)
+
 　　从结果中看到：Survivor1区没使用，Survivor2区使用了95.37%的空间，Eden使用了86.84%的空间，方法区使用了97.77%的空间，压缩类空间使用了93.93%的空间，从程序启动到查看状态时发生了一次Young GC，所用时间为0.007秒，没有发生Full GC，GC总共花费时间为0.007秒。
 ## jinfo：Java配置信息工具
 　　jinfo（Configuration Info for Java）的作用是实时地查看和调整虚拟机各项参数。 使用jps命令的-v参数可以查看虚拟机启动时显式指定的参数列表，但如果想知道未被显式指定的参数的系统默认值，除了去找资料外，就只能使用jinfo的-flag选项进行查询了（JDK 1.6或以上版本的话，使用`java-XX：+PrintFlagsFinal`也可以查看参数默认值），jinfo还可以使用`-sysprops`选项把虚拟机进程的`System.getProperties（）`的内容打印出来。 这个命令在JDK 1.5时期已经随着Linux版的JDK发布，当时只提供了信息查询的功能，JDK 1.6之后，jinfo在Windows和Linux平台都有提供，并且加入了运行期修改参数的能力，可以使用-flag[+|-]name或者-flag name=value修改一部分运行期可写的虚拟机参数值。JDK 1.6中，jinfo对于Windows平台功能仍然有较大限制，只提供了最基本的-flag选项。
@@ -313,4 +316,5 @@ public class Obj {
 可以看到4个线程都处于“WAITING”状态。
 ### jstack -l
 ![jstack -l](http://img.blog.csdn.net/20170712195133479?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvQWxvbmVfUm9qZXI=/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast)
-可以看到线程都没有拥有锁。
+
+　　可以看到线程都没有拥有锁。
