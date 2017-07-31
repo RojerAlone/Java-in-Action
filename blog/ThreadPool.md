@@ -444,4 +444,269 @@ public void execute(Runnable command) {
         reject(command);
 }
 ```
+　　源码中出现了多次 `addWorker` 操作，继续查看 `addWorker` 的源码。
+### `addWorker`
+``` Java
+private boolean addWorker(Runnable firstTask, boolean core) {
+    retry:
+    for (;;) {
+        int c = ctl.get(); // 获取线程池执行状态
+        int rs = runStateOf(c);
+        // Check if queue empty only if necessary.
+        // 如果线程池不是正常运行状态，如果出现以下3种情况之一的，就返回 false ：
+        // 1. 线程池不是关闭状态
+        // 2. 线程池关闭了，但是传入的任务非空
+        // 3. 线程池关闭了，传入的线程非空但是没有任务正在执行
+        if (rs >= SHUTDOWN &&
+            ! (rs == SHUTDOWN &&
+               firstTask == null &&
+               ! workQueue.isEmpty()))
+            return false;
+        // 如果线程池一切正常，那么执行以下逻辑
+        for (;;) {
+            int wc = workerCountOf(c); // 获取当前线程池中线程数量
+            // 如果线程池已满，返回 false
+            if (wc >= CAPACITY ||
+                wc >= (core ? corePoolSize : maximumPoolSize))
+                return false;
+            // 如果线程池没满，线程安全地增加线程数量，增加成功就退出循环
+            if (compareAndIncrementWorkerCount(c))
+                break retry;
+            // 添加失败的话就再获取状态，如果线程池状态和之前获取的状态不一致，继续循环
+            c = ctl.get();  // Re-read ctl
+            if (runStateOf(c) != rs)
+                continue retry;
+            // else CAS failed due to workerCount change; retry inner loop
+        }
+    }
+    // 添加任务成功之后才会执行到这里
+    boolean workerStarted = false;
+    boolean workerAdded = false;
+    Worker w = null;
+    try {
+        w = new Worker(firstTask);
+        final Thread t = w.thread;
+        if (t != null) {
+            final ReentrantLock mainLock = this.mainLock;
+            mainLock.lock();
+            try {
+                // Recheck while holding lock.
+                // Back out on ThreadFactory failure or if
+                // shut down before lock acquired.
+                // 当拿到锁以后再次检查状态
+                // 如果 ThreadFactory 失败或者获取锁过程中线程池关闭，就退出
+                int rs = runStateOf(ctl.get());
+                // 如果线程池状态正常或者线程池关闭了同时任务为空
+                if (rs < SHUTDOWN ||
+                    (rs == SHUTDOWN && firstTask == null)) {
+                    // 如果线程已经启动，就抛出异常
+                    if (t.isAlive()) // precheck that t is startable
+                        throw new IllegalThreadStateException();
+                    workers.add(w); // 将 worker 加入到工作线程队列中
+                    int s = workers.size();
+                    if (s > largestPoolSize) // 记录线程池达到过的最大容量
+                        largestPoolSize = s;
+                    workerAdded = true;
+                }
+            } finally {
+                mainLock.unlock();
+            }
+            if (workerAdded) { // 如果任务添加成功，就开始执行任务
+                t.start(); // 启动线程，也就是 worker，worker 会不断从等待队列中获取任务并执行
+                workerStarted = true;
+            }
+        }
+    } finally {
+        if (! workerStarted)
+            addWorkerFailed(w);
+    }
+    return workerStarted;
+}
+```
+　　在 `addWorker` 方法中将任务封装成了一个 `Worker` 类，执行任务的时候执行的线程是从 `Worker` 类中获取的线程，`Worker` 是线程池的一个内部类，查看它的源码。
+### `Worker` 类
+``` Java
+private final class Worker
+        extends AbstractQueuedSynchronizer
+        implements Runnable
+    {
+        /**
+         * This class will never be serialized, but we provide a
+         * serialVersionUID to suppress a javac warning.
+         * 为了抑制 javac 警告添加了序列化ID
+         */
+        private static final long serialVersionUID = 6138294804551838833L;
+
+        /** Thread this worker is running in.  Null if factory fails. */
+        // worker 运行的线程，如果 ThreadFactory 生成失败的话这个值为 null
+        final Thread thread;
+        /** Initial task to run.  Possibly null. */
+        // 运行的初始任务，可能为 null
+        Runnable firstTask;
+        /** Per-thread task counter */
+        // 记录总共执行过的任务
+        volatile long completedTasks;
+
+        /**
+         * 用传进来的参数作为第一个任务，用 ThreadFactory 创建线程
+         */
+        Worker(Runnable firstTask) {
+            setState(-1); // inhibit interrupts until runWorker
+            this.firstTask = firstTask;
+            this.thread = getThreadFactory().newThread(this);
+        }
+
+        /**
+         * 将运行任务交给其他的方法执行
+         * Worker 作为一个实现了 Runnable 接口的类，要实现 run 方法，
+         * 线程启动的时候调用的是 start 方法，start 方法内部调用 run 方法，
+         * 所以实际运行时候执行的是这个 run 方法
+         */
+        public void run() {
+            runWorker(this);
+        }
+
+        /**
+         * Worker 继承了 AbstractQueuedSynchronizer，下面就是需要重写的一些必要的方法
+         */
+
+        // Lock methods
+        //
+        // The value 0 represents the unlocked state.
+        // The value 1 represents the locked state.
+        // 是否是独占锁
+        protected boolean isHeldExclusively() {
+            return getState() != 0;
+        }
+
+        protected boolean tryAcquire(int unused) {
+            if (compareAndSetState(0, 1)) {
+                setExclusiveOwnerThread(Thread.currentThread());
+                return true;
+            }
+            return false;
+        }
+
+        protected boolean tryRelease(int unused) {
+            setExclusiveOwnerThread(null);
+            setState(0);
+            return true;
+        }
+
+        public void lock()        { acquire(1); }
+        public boolean tryLock()  { return tryAcquire(1); }
+        public void unlock()      { release(1); }
+        public boolean isLocked() { return isHeldExclusively(); }
+
+        void interruptIfStarted() {
+            Thread t;
+            if (getState() >= 0 && (t = thread) != null && !t.isInterrupted()) {
+                try {
+                    t.interrupt();
+                } catch (SecurityException ignore) {
+                }
+            }
+        }
+    }
+```
+　　从 `Worker` 中可以看出，它继承了 `AbstractQueuedSynchronizer`，方便加锁解锁，并且实现了 `Runnable` 接口，本身作为一个线程运行。
+
+　　这里就是线程池为什么任务执行之后线程没有销毁，提交到线程池的线程不是调用了线程的 `start` 方法，而是被 `Worker` 中的 `run` 方法调用，`run` 方法内部等下再看。`Worker` 中的属性 `thread` 是将 `Worker` 本身封装成为了一个 `Thread`，然后启动线程，虽然执行的是 `run` 方法而不是我们所熟知的 `start` 方法启动线程，但是任务的 `run` 方法被 `Worker` 的 `run` 方法调用，`Worker` 的 `run` 方法又是被 `start` 方法所启动，因此实现了线程的交互运行。
+
+　　接下来看一下 `runWorker` 方法，这个方法是线程池如何不销毁线程而不断执行任务的。
+### `runWorker`
+　　`runWorker` 实际上是线程池 `ThreadPoolExecutor` 中的方法而不是 `Worker` 中的：
+``` Java
+final void runWorker(Worker w) {
+    Thread wt = Thread.currentThread();
+    Runnable task = w.firstTask; // 获取 Worker 中当前要执行的任务
+    w.firstTask = null; // 已经拿到了任务，将 Worker 中的任务置为 null
+    w.unlock(); // allow interrupts
+    boolean completedAbruptly = true;
+    try {
+        // 如果任务不为空或者任务为空但是从队列中获取到了任务，就执行任务
+        while (task != null || (task = getTask()) != null) { 
+            w.lock();
+            // If pool is stopping, ensure thread is interrupted;
+            // if not, ensure thread is not interrupted.  This
+            // requires a recheck in second case to deal with
+            // shutdownNow race while clearing interrupt
+            // 如果线程池停止了，确保线程被中断了，如果线程池正在运行，确保线程没有被中断
+            if ((runStateAtLeast(ctl.get(), STOP) ||
+                 (Thread.interrupted() &&
+                  runStateAtLeast(ctl.get(), STOP))) &&
+                !wt.isInterrupted())
+                wt.interrupt();
+            try {
+                beforeExecute(wt, task); // 开始执行任务之前应该做的，本身什么都不做，可以子类重写
+                Throwable thrown = null;
+                try {
+                    task.run(); // 执行任务的 run 方法，这里才真正执行了任务
+                } catch (RuntimeException x) {
+                    thrown = x; throw x;
+                } catch (Error x) {
+                    thrown = x; throw x;
+                } catch (Throwable x) {
+                    thrown = x; throw new Error(x);
+                } finally {
+                    afterExecute(task, thrown); // 同 beforeExecute
+                }
+            } finally { // 将要执行的任务置为空，已完成任务 +1，释放锁
+                task = null;
+                w.completedTasks++;
+                w.unlock();
+            }
+        }
+        completedAbruptly = false; // 标记是否是正常完成，如果出现异常是不会执行这一步的，直接执行 finally
+    } finally { // 结束线程，在之前提到的核心池满了等待队列也满了会创建临时线程执行任务，执行完销毁
+        processWorkerExit(w, completedAbruptly);
+    }
+}
+```
+　　可以看出 `runWorker` 方法中真正执行了任务，然后不停从等待队列中获取新的任务继续执行。
+
+　　下面看一下是怎么从等待队列中获取任务的。
+### `getTask`
+``` Java
+private Runnable getTask() {
+    boolean timedOut = false; // Did the last poll() time out?
+
+    for (;;) {
+        int c = ctl.get();
+        int rs = runStateOf(c);
+
+        // Check if queue empty only if necessary.
+        if (rs >= SHUTDOWN && (rs >= STOP || workQueue.isEmpty())) {
+            decrementWorkerCount();
+            return null;
+        }
+
+        int wc = workerCountOf(c);
+
+        // Are workers subject to culling?
+        boolean timed = allowCoreThreadTimeOut || wc > corePoolSize;
+
+        if ((wc > maximumPoolSize || (timed && timedOut))
+            && (wc > 1 || workQueue.isEmpty())) {
+            if (compareAndDecrementWorkerCount(c))
+                return null;
+            continue;
+        }
+
+        try {
+            Runnable r = timed ?
+                workQueue.poll(keepAliveTime, TimeUnit.NANOSECONDS) :
+                workQueue.take();
+            if (r != null)
+                return r;
+            timedOut = true;
+        } catch (InterruptedException retry) {
+            timedOut = false;
+        }
+    }
+}
+```
+## 用 `Executors` 创建线程池
+　　JDK 中提供了一个 `Executors` 类，在这个类中
+
 　　
