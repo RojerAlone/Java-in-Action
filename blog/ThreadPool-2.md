@@ -1,4 +1,4 @@
-# ThreadPool 之线程池实现类 `ThreadPoolExecutor`
+# ThreadPool 之 线程池实现类 `ThreadPoolExecutor`
 ## `ThreadPoolExecutor` 线程池
 　　`ThreadPoolExecutor` 继承了 `AbstractExecutorService`，实现了核心方法 `execute` 以及一些获取线程池信息的方法。
 
@@ -398,6 +398,45 @@ private Runnable getTask() {
     }
 }
 ```
+### 关闭线程池
+　　`ExecutorService` 提供了两种关闭线程池的方式，`shutdown()` 和 `shutdownNow()`。
+#### `shutdown()`
+``` Java
+public void shutdown() {
+    final ReentrantLock mainLock = this.mainLock;
+    mainLock.lock(); // 加锁
+    try {
+        checkShutdownAccess(); // 检查调用者是否有权关闭线程
+        advanceRunState(SHUTDOWN); // 修改线程池的运行状态
+        interruptIdleWorkers(); // 中断所有的空闲 worker
+        onShutdown(); // ScheduledThreadPoolExecutor 的钩子，ThreadPoolExecutor 内部不做任何处理
+    } finally {
+        mainLock.unlock();
+    }
+    tryTerminate(); // 将线程池状态改为 TERMINATED
+}
+```
+#### `shutdownNow()`
+``` Java
+public List<Runnable> shutdownNow() {
+    List<Runnable> tasks;
+    final ReentrantLock mainLock = this.mainLock;
+    mainLock.lock();
+    try {
+        checkShutdownAccess();
+        advanceRunState(STOP); // 修改线程池的运行状态
+        interruptWorkers(); // 中断所有的 worker，不管有没有在工作
+        tasks = drainQueue(); // 移出所有的等待任务，最后返回
+    } finally {
+        mainLock.unlock();
+    }
+    tryTerminate();
+    return tasks;
+}
+```
+　　可以看到，`shutdown()` 只是将空闲的 worker 关闭，然后修改线程池状态为关闭。如果 worker 正在执行任务，当前任务执行完之后发现线程池已经关闭，就会结束。
+
+　　`shutdownNow()` 是强制中止所有的正在执行的任务，然后返回待执行的任务。
 ### 线程池原理小结
 　　看了 `execute` 、`addWorker`、`Worker` 类、`runWorker` 的源码，可以清楚地了解线程池的原理：
 
