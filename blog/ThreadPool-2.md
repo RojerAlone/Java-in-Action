@@ -1,7 +1,7 @@
 # ThreadPool 之 线程池实现类 `ThreadPoolExecutor`
 ## `ThreadPoolExecutor` 线程池
 　　`ThreadPoolExecutor` 继承了 `AbstractExecutorService`，实现了核心方法 `execute` 以及一些获取线程池信息的方法。
-
+### `ThreadPoolExecutor` 参数
 　　`ThreadPoolExecutor` 有一些重要的参数：
 ``` Java
 // ctl存储了线程状态以及当前线程池的线程数量
@@ -55,17 +55,17 @@ public ThreadPoolExecutor(int corePoolSize,
     }
 ```
 　　下面来逐一解释一下各个参数的含义。
-### `int corePoolSize`
+#### `int corePoolSize`
 　　核心池大小，一个线程池是同时在执行很多任务的，核心池就是正在执行的任务池。
-### `int maximumPoolSize`
+#### `int maximumPoolSize`
 　　线程池的最大线程数，当核心池满了以后，新添加的任务就会放到等待队列中，如果等待队列满了，线程池就想快点执行任务，腾出位置给新加进来的线程，如果当前工作线程数小于 `maximumPoolSize`，那么就创建新的线程来执行刚加进来的任务，可以认为是线程池负荷过重，创建新的线程来减轻压力。
-### `long keepAliveTime`
+#### `long keepAliveTime`
 　　线程存活时间，如果一个线程处在空闲状态的时间超过了这个值，就会因为超时而退出。
-### `BlockingQueue<Runnable> workQueue`
+#### `BlockingQueue<Runnable> workQueue`
 　　`workQueue` 是一个阻塞队列，用来存放等待被执行的任务的队列。如果核心池满了，就把等待执行的线程放到这里。
-### `ThreadFactory threadFactory`
+#### `ThreadFactory threadFactory`
 　　用来创建线程的线程工厂。
-### `RejectedExecutionHandler handler`
+#### `RejectedExecutionHandler handler`
 　　任务拒绝策略。`ThreadPoolExecutor` 中有四个实现了 `RejectedExecutionHandler` 接口的内部类，分别是：
 
 - ThreadPoolExecutor.AbortPolicy:丢弃任务并抛出RejectedExecutionException异常。 
