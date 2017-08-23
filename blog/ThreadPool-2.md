@@ -7,7 +7,7 @@
 // ctl存储了线程状态以及当前线程池的线程数量
 private final AtomicInteger ctl = new AtomicInteger(ctlOf(RUNNING, 0));
 private static final int COUNT_BITS = Integer.SIZE - 3;
-private static final int CAPACITY   = (1 << COUNT_BITS) - 1;// 最多可容纳 2^29 个线程
+private static final int CAPACITY   = (1 << COUNT_BITS) - 1;// 最多可容纳 2^29 - 1 个线程
 // 运行时状态存储在高字节位
 private static final int RUNNING    = -1 << COUNT_BITS;
 private static final int SHUTDOWN   =  0 << COUNT_BITS;
