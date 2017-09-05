@@ -5,7 +5,7 @@
 
 | 名字 | 是否延迟初始化 | 是否线程安全 |
 |:---: | :---: | :---: |
-| [懒汉式（非线程安全）](https://github.com/RojerAlone/Java-in-Action/blob/master/src/cn.alone/DesignPattern/SingletonPattern/LazyMan.java) | 是 | 否 |
+| [懒汉式（非线程安全）](https://github.com/RojerAlone/Java-in-Action/blob/master/src/cn/alone/DesignPattern/SingletonPattern/LazyMan.java) | 是 | 否 |
 | 懒汉式（线程安全） | 是 | 是 |
 | 饿汉式 | 否 | 是 |
 | 双重校验锁（double-checked locking） | 是 | 是 |
