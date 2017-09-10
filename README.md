@@ -10,3 +10,11 @@
 - [ThreadPool 之 线程池工具类 Executors](https://github.com/RojerAlone/Java-in-Action/blob/master/blog/ThreadPool-4.md)
 ### JUC java.util.concurrent
 - [AbstractQueuedSynchronizer 之 互斥锁](https://github.com/RojerAlone/Java-in-Action/blob/master/blog/AbstractQueueSynchronizer-Mutex.md)
+- [AbstractQueuedSynchronizer 之 共享锁](https://github.com/RojerAlone/Java-in-Action/blob/master/blog/AbstractQueueSynchronizer-Shared.md)
+- [CountDownLatch](https://github.com/RojerAlone/Java-in-Action/blob/master/blog/CountDownLatch.md)
+- [Semaphore](https://github.com/RojerAlone/Java-in-Action/blob/master/blog/Semaphore.md)
+- [CyclicBarrier](https://github.com/RojerAlone/Java-in-Action/blob/master/blog/CyclicBarrier.md)
+## 设计模式
+[设计模式](https://github.com/RojerAlone/Java-in-Action/tree/master/src/cn/alone/DesignPattern)
+## 计算机网络
+[TCP 三次握手、四次挥手](https://github.com/RojerAlone/Java-in-Action/blob/master/blog/TCPConnectionAndClose.md)
