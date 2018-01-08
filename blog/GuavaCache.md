@@ -76,8 +76,112 @@ public interface LoadingCache<K, V> extends Cache<K, V>, Function<K, V> {
 下面来看一下 `LoadingCache` 最核心的 `get` 方法（`LoadingCache` 接口的实现类是 `LocalCache` 中的 `LocalLoadingCache`）。
 ## LoadingCache.get(K key)
 ``` Java
-@Override
-public V get(K key) throws ExecutionException {
-    return localCache.getOrLoad(key);
+static class LocalLoadingCache<K, V> extends LocalManualCache<K, V> 
+    implements LoadingCache<K, V> {
+    LocalLoadingCache(
+        CacheBuilder<? super K, ? super V> builder, CacheLoader<? super K, V> loader) {
+        super(new LocalCache<K, V>(builder, checkNotNull(loader)));
+    }
+
+    @Override
+    public V get(K key) throws ExecutionException {
+        /*
+         * 这里的 localCache 来自于父类 LocalManualCache，
+         * 而父类的 localCache 由 LocalLoadingCache 构造方法传入，传入的是新创建的 LocalCache
+         */
+        return localCache.getOrLoad(key);
+    }
+}
+```
+来看一下 `LocalCache` 的构造方法中做了什么：
+``` Java
+LocalCache(
+      CacheBuilder<? super K, ? super V> builder, @Nullable CacheLoader<? super K, V> loader) {
+    // 允许的并发数，默认为 4
+    concurrencyLevel = Math.min(builder.getConcurrencyLevel(), MAX_SEGMENTS);
+    // key 和 value 的引用强弱，enum 类型，分别为 强引用、软引用、弱引用，默认为 强引用
+    keyStrength = builder.getKeyStrength();
+    valueStrength = builder.getValueStrength();
+    // key 和 value 的比较策略，在 Strength 的 3 种引用中有默认实现
+    keyEquivalence = builder.getKeyEquivalence();
+    valueEquivalence = builder.getValueEquivalence();
+    // 从 builder 中获取 build 之前设置的参数
+    maxWeight = builder.getMaximumWeight(); // 最大权重
+    weigher = builder.getWeigher(); // 权重计算器
+    expireAfterAccessNanos = builder.getExpireAfterAccessNanos(); // 最后一次访问多久之后缓存失效
+    expireAfterWriteNanos = builder.getExpireAfterWriteNanos(); // 缓存写入多久之后缓存失效
+    refreshNanos = builder.getRefreshNanos(); // 缓存更新时间
+
+    removalListener = builder.getRemovalListener(); // 软引用、弱引用被回收时候的监听器
+    removalNotificationQueue =
+        (removalListener == NullListener.INSTANCE)
+            ? LocalCache.<RemovalNotification<K, V>>discardingQueue()
+            : new ConcurrentLinkedQueue<RemovalNotification<K, V>>();
+
+    ticker = builder.getTicker(recordsTime());
+    entryFactory = EntryFactory.getFactory(keyStrength, usesAccessEntries(), usesWriteEntries());
+    globalStatsCounter = builder.getStatsCounterSupplier().get();
+    defaultLoader = loader;
+
+    int initialCapacity = Math.min(builder.getInitialCapacity(), MAXIMUM_CAPACITY);
+    if (evictsBySize() && !customWeigher()) {
+      initialCapacity = Math.min(initialCapacity, (int) maxWeight);
+    }
+
+    // Find the lowest power-of-two segmentCount that exceeds concurrencyLevel, unless
+    // maximumSize/Weight is specified in which case ensure that each segment gets at least 10
+    // entries. The special casing for size-based eviction is only necessary because that eviction
+    // happens per segment instead of globally, so too many segments compared to the maximum size
+    // will result in random eviction behavior.
+    int segmentShift = 0;
+    int segmentCount = 1;
+    while (segmentCount < concurrencyLevel && (!evictsBySize() || segmentCount * 20 <= maxWeight)) {
+      ++segmentShift;
+      segmentCount <<= 1;
+    }
+    this.segmentShift = 32 - segmentShift;
+    segmentMask = segmentCount - 1;
+
+    this.segments = newSegmentArray(segmentCount);
+
+    int segmentCapacity = initialCapacity / segmentCount;
+    if (segmentCapacity * segmentCount < initialCapacity) {
+      ++segmentCapacity;
+    }
+
+    int segmentSize = 1;
+    while (segmentSize < segmentCapacity) {
+      segmentSize <<= 1;
+    }
+
+    if (evictsBySize()) {
+      // Ensure sum of segment max weights = overall max weights
+      long maxSegmentWeight = maxWeight / segmentCount + 1;
+      long remainder = maxWeight % segmentCount;
+      for (int i = 0; i < this.segments.length; ++i) {
+        if (i == remainder) {
+          maxSegmentWeight--;
+        }
+        this.segments[i] =
+            createSegment(segmentSize, maxSegmentWeight, builder.getStatsCounterSupplier().get());
+      }
+    } else {
+      for (int i = 0; i < this.segments.length; ++i) {
+        this.segments[i] =
+            createSegment(segmentSize, UNSET_INT, builder.getStatsCounterSupplier().get());
+      }
+    }
+}
+```
+继续看 `getOrLoad` 方法：
+``` Java
+V getOrLoad(K key) throws ExecutionException {
+    // defaultLoader 是 build(CacheLoader loader) 传入的 loader
+    return get(key, defaultLoader);
+}
+
+V get(K key, CacheLoader<? super K, V> loader) throws ExecutionException {
+    int hash = hash(checkNotNull(key)); // 获取 hash 值
+    return segmentFor(hash).get(key, hash, loader);
 }
 ```
