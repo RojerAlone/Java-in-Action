@@ -182,6 +182,89 @@ V getOrLoad(K key) throws ExecutionException {
 
 V get(K key, CacheLoader<? super K, V> loader) throws ExecutionException {
     int hash = hash(checkNotNull(key)); // 获取 hash 值
-    return segmentFor(hash).get(key, hash, loader);
+    return segmentFor(hash).get(key, hash, loader); // 根据 hash 值找到对应的桶，并调用 get 方法
 }
+```
+
+`get` 方法根据哈希值找到对应的桶，这里 `LoadingCache` 使用的是一个自定义的 `Segment` 数组，找到 `key` 对应的 `Segment` 对象后，调用 `Segment` 对象的 `get` 方法。
+### Segment
+
+`Segment` 中有 58 个方法，14 个成员变量，过于庞大，先来看一下各个成员变量。
+
+``` Java
+    /**
+     * 当前 Segment 所属的 LocalCache 对象
+     */
+    @Weak 
+    final LocalCache<K, V> map;
+
+    /**
+     * 仍然有效的元素个数
+     */
+    volatile int count;
+
+    /**
+     * 仍然有效元素的权重之和
+     */
+    @GuardedBy("this")
+    long totalWeight;
+
+    /**
+     * 记录更改哈希表大小的次数，如果一个线程操作过程中计数改变，需要重试
+     */
+    int modCount;
+
+    /**
+     * 哈希表扩容时候的上限，和 HashMap 一样，通常是总容量的 0.75
+     */
+    int threshold;
+
+    /**
+     * 每个段的表
+     */
+    volatile AtomicReferenceArray<ReferenceEntry<K, V>> table;
+
+    /**
+     * 当前分段的最大权重，如果没有最大权重，就是 UNSET_INT 
+     */
+    final long maxSegmentWeight;
+
+    /**
+     * 存放已经过期被清理的 key 和需要被清除的 key
+     */
+    final ReferenceQueue<K> keyReferenceQueue;
+
+    /**
+     * 存放已经过期被清理的 value 和需要被清除的 value
+     */
+    final ReferenceQueue<V> valueReferenceQueue;
+
+    /**
+     * TODO
+     *
+     * The recency queue is used to record which entries were accessed for updating the access
+     * list's ordering. It is drained as a batch operation when either the DRAIN_THRESHOLD is
+     * crossed or a write occurs on the segment.
+     */
+    final Queue<ReferenceEntry<K, V>> recencyQueue;
+
+    /**
+     * 自从上次被写入以后，读取的次数，用来清理过期队列
+     */
+    final AtomicInteger readCount = new AtomicInteger();
+
+    /**
+     * 当前 map 中的队列，一个链表，按照写入的顺序排序，新写入的元素放在尾部
+     */
+    @GuardedBy("this")
+    final Queue<ReferenceEntry<K, V>> writeQueue;
+
+    /**
+     * 当前 map 中的队列，按照访问时间排序
+     */
+    @GuardedBy("this")
+    final Queue<ReferenceEntry<K, V>> accessQueue;
+
+    /** 缓存统计数据 */
+    final StatsCounter statsCounter;
 ```
