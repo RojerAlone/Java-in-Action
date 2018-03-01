@@ -7,3 +7,4 @@
 - [代理模式](https://github.com/RojerAlone/Java-in-Action/tree/master/src/cn/alone/DesignPattern/ProxyPattern)
 ## 行为型
 - [观察者模式](https://github.com/RojerAlone/Java-in-Action/tree/master/src/cn/alone/DesignPattern/ObserverPattern)
+- [策略模式](https://github.com/RojerAlone/Java-in-Action/tree/master/src/cn/alone/DesignPattern/StrategyPattern)
