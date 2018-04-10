@@ -15,11 +15,15 @@
 - [CountDownLatch](https://github.com/RojerAlone/Java-in-Action/blob/master/blog/CountDownLatch.md)
 - [Semaphore](https://github.com/RojerAlone/Java-in-Action/blob/master/blog/Semaphore.md)
 - [CyclicBarrier](https://github.com/RojerAlone/Java-in-Action/blob/master/blog/CyclicBarrier.md)
+## io
+- [Scalable io in Java - Doug Lea](http://gee.cs.oswego.edu/dl/cpjslides/nio.pdf)
 ## 缓存
 - [Guava Cache 源码解析](https://github.com/RojerAlone/Java-in-Action/blob/master/blog/GuavaCache.md)
 ## 设计模式
 [设计模式](https://github.com/RojerAlone/Java-in-Action/tree/master/src/cn/alone/DesignPattern)
 ## 计算机网络
 [TCP 三次握手、四次挥手](https://github.com/RojerAlone/Java-in-Action/blob/master/blog/TCPConnectionAndClose.md)
+## 操作系统
+[cache line and false cache](https://github.com/RojerAlone/Java-in-Action/tree/master/src/cn/alone/optimization)
 ## Git
 [Git](https://github.com/RojerAlone/Java-in-Action/blob/master/blog/git.md)
