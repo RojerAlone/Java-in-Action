@@ -27,3 +27,5 @@
 [cache line and false cache](https://github.com/RojerAlone/Java-in-Action/tree/master/src/cn/alone/optimization)
 ## Git
 [Git](https://github.com/RojerAlone/Java-in-Action/blob/master/blog/git.md)
+## 踩坑、问题排查
+- [一次 CPU 飙高异常的处理](https://github.com/RojerAlone/Java-in-Action/blob/master/blog/solve_java_cpu_overload.md)
